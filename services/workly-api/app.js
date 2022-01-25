@@ -4,35 +4,41 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 const { ApolloServer } = require('apollo-server-express');
 const { ApolloServerPluginDrainHttpServer } = require('apollo-server-core');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 
-const typeDefs =`
+const typeDefs = `
+type User{
+    id: ID!
+    name: String!
+}
 type Query{
     hello: String!
     users: [User]
 }
 `,
-    resolvers = {
-        Query: {
-            hello: () => "Hello",
-        }
-    };
+  resolvers = {
+    Query: {
+      hello: () => 'Hello',
+      users: () => prisma.user.findMany(),
+    },
+  };
 async function startApolloServer(app, httpServer) {
-    const server = new ApolloServer({
-        typeDefs,
-        resolvers,
-        plugins: [ApolloServerPluginDrainHttpServer({ httpServer })]
-    });
+  const server = new ApolloServer({
+    typeDefs,
+    resolvers,
+    plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
+  });
 
+  await server.start();
+  server.applyMiddleware({
+    app,
+  });
 
-    await server.start();
-    server.applyMiddleware({
-        app
-    });
-
-    return server;
+  return server;
 }
 
 var app = express();
